@@ -81,18 +81,23 @@ class GCPCloudRunBackend:
         """
         Instantiate and authorize admin discovery API session
         """
+
+        logger.debug('Building admin API session')
+        credentials = service_account.Credentials.from_service_account_file(self.credentials_path, scopes=SCOPES)
+        http = AuthorizedHttp(credentials, http=httplib2.Http())
+        _api_resource = build(
+            'run', CLOUDRUN_API_VERSION,
+            http=http, cache_discovery=False,
+            client_options={
+                'api_endpoint': f'https://{self.region}-run.googleapis.com'
+            }
+        )
+
         if self._api_resource is None:
-            logger.debug('Building admin API session')
-            credentials = service_account.Credentials.from_service_account_file(self.credentials_path, scopes=SCOPES)
-            http = AuthorizedHttp(credentials, http=httplib2.Http())
-            self._api_resource = build(
-                'run', CLOUDRUN_API_VERSION,
-                http=http, cache_discovery=False,
-                client_options={
-                    'api_endpoint': f'https://{self.region}-run.googleapis.com'
-                }
-            )
-        return self._api_resource
+            self._api_resource = _api_resource
+
+
+        return _api_resource
 
     def _build_invoker_sess(self, runtime_name, memory, route):
         """
